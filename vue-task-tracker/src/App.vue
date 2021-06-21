@@ -1,13 +1,77 @@
 <template>
 	<div class="container">
-		<h1>Hello World</h1>
+		<Header
+			title="Task Tracker"
+			@toggle-add-form="toggleAddForm"
+			:showAddForm="showAddForm"
+		/>
+		<div v-show="showAddForm">
+			<AddTask @add-task="addTask" />
+		</div>
+		<Tasks
+			:tasks="tasks"
+			@toggle-reminder="toggleReminder"
+			@delete-task="deleteTask"
+		/>
 	</div>
 </template>
 
 <script>
+import Header from "./components/Header.vue";
+import Tasks from "./components/Tasks.vue";
+import AddTask from "./components/AddTask.vue";
+
 export default {
 	name: "App",
-	components: {},
+	components: {
+		Header,
+		Tasks,
+		AddTask,
+	},
+	data() {
+		return {
+			tasks: [],
+			showAddForm: false,
+		};
+	},
+	methods: {
+		addTask(task) {
+			this.tasks = [...this.tasks, task];
+		},
+		deleteTask(id) {
+			this.tasks = this.tasks.filter((task) => task.id !== id);
+		},
+		toggleReminder(id) {
+			this.tasks = this.tasks.map((task) =>
+				task.id === id ? { ...task, reminder: !task.reminder } : task
+			);
+		},
+		toggleAddForm() {
+			this.showAddForm = !this.showAddForm;
+		},
+	},
+	created() {
+		this.tasks = [
+			{
+				id: 1,
+				text: "Doctor Appointment",
+				day: "Sunday",
+				reminder: true,
+			},
+			{
+				id: 2,
+				text: "Work Meeting",
+				day: "Monday",
+				reminder: true,
+			},
+			{
+				id: 3,
+				text: "Grocery",
+				day: "Tuesday",
+				reminder: false,
+			},
+		];
+	},
 };
 </script>
 
