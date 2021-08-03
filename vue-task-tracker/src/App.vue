@@ -8,11 +8,14 @@
 		<div v-show="showAddForm">
 			<AddTask @add-task="addTask" />
 		</div>
-		<Tasks
-			:tasks="tasks"
-			@toggle-reminder="toggleReminder"
-			@delete-task="deleteTask"
-		/>
+		<div v-if="tasks.length">
+			<Tasks
+				:tasks="tasks"
+				@toggle-reminder="toggleReminder"
+				@delete-task="deleteTask"
+			/>
+		</div>
+		<div v-else>Loading Tasks...</div>
 	</div>
 </template>
 
@@ -21,6 +24,10 @@ import Header from "./components/Header.vue";
 import Tasks from "./components/Tasks.vue";
 import AddTask from "./components/AddTask.vue";
 
+import getTasks from "./composables/getTasks";
+
+import { ref } from "vue";
+
 export default {
 	name: "App",
 	components: {
@@ -28,49 +35,70 @@ export default {
 		Tasks,
 		AddTask,
 	},
-	data() {
-		return {
-			tasks: [],
-			showAddForm: false,
+	setup() {
+		const showAddForm = ref(false);
+		const { tasks, loadTasks } = getTasks();
+
+		loadTasks();
+
+		const addTask = async (task) => {
+			const res = await fetch("http://localhost:5000/tasks", {
+				method: "POST",
+				headers: {
+					"Content-type": "application/json",
+				},
+				body: JSON.stringify(task),
+			});
+			const data = await res.json();
+
+			tasks.value = [...tasks.value, data];
 		};
-	},
-	methods: {
-		addTask(task) {
-			this.tasks = [...this.tasks, task];
-		},
-		deleteTask(id) {
-			this.tasks = this.tasks.filter((task) => task.id !== id);
-		},
-		toggleReminder(id) {
-			this.tasks = this.tasks.map((task) =>
-				task.id === id ? { ...task, reminder: !task.reminder } : task
+
+		const deleteTask = async (id) => {
+			const res = await fetch(`http://localhost:5000/tasks/${id}`, {
+				method: "DELETE",
+			});
+			res.status === 200
+				? (tasks.value = tasks.value.filter((task) => task.id !== id))
+				: alert("Delete task failed");
+		};
+
+		const toggleReminder = async (id) => {
+			const taskToToggle = await fetchTask(id);
+			const updatedTask = { ...taskToToggle, reminder: !taskToToggle.reminder };
+
+			const res = await fetch(`http://localhost:5000/tasks/${id}`, {
+				method: "PUT",
+				headers: {
+					"Content-type": "application/json",
+				},
+				body: JSON.stringify(updatedTask),
+			});
+
+			const data = await res.json();
+
+			tasks.value = tasks.value.map((task) =>
+				task.id === id ? { ...task, reminder: data.reminder } : task
 			);
-		},
-		toggleAddForm() {
-			this.showAddForm = !this.showAddForm;
-		},
-	},
-	created() {
-		this.tasks = [
-			{
-				id: 1,
-				text: "Doctor Appointment",
-				day: "Sunday",
-				reminder: true,
-			},
-			{
-				id: 2,
-				text: "Work Meeting",
-				day: "Monday",
-				reminder: true,
-			},
-			{
-				id: 3,
-				text: "Grocery",
-				day: "Tuesday",
-				reminder: false,
-			},
-		];
+		};
+
+		const toggleAddForm = () => {
+			showAddForm.value = !showAddForm.value;
+		};
+
+		const fetchTask = async (id) => {
+			const res = await fetch(`http://localhost:5000/tasks/${id}`);
+			return await res.json();
+		};
+
+		return {
+			tasks,
+			showAddForm,
+			addTask,
+			deleteTask,
+			toggleReminder,
+			toggleAddForm,
+		};
 	},
 };
 </script>
